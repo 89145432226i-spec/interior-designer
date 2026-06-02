@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>{{ project.title }} — Ваш проект</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Georgia,serif;background:#f5f0eb;min-height:100vh}
+.header{background:white;padding:15px 25px;box-shadow:0 2px 15px rgba(0,0,0,.08)}
+.logo{font-size:20px;color:#2c2c2c}.logo span{color:#8b6914}
+.sub{font-size:13px;color:#aaa;margin-top:2px}
+.main{max-width:900px;margin:25px auto;padding:0 15px}
+.card{background:white;border-radius:14px;padding:25px;box-shadow:0 2px 15px rgba(0,0,0,.07);margin-bottom:20px}
+.card-title{font-size:18px;color:#2c2c2c;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #f0ebe4}
+.pt{font-size:22px;color:#2c2c2c;margin-bottom:5px}
+.pc{color:#888;font-size:14px;margin-bottom:4px}
+.pm{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:20px 0}
+.pm-item{background:#fdfaf7;border-radius:10px;padding:14px}
+.pm-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.pm-val{font-size:15px;color:#2c2c2c;font-weight:bold}
+.pb-wrap{margin-top:15px}
+.pb-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;color:#666}
+.pb{background:#f0ebe4;border-radius:10px;height:10px}
+.pf{background:linear-gradient(90deg,#8b6914,#c9a84c);border-radius:10px;height:100%}
+.rg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px}
+.rc{background:#fdfaf7;border-radius:12px;overflow:hidden;border:1px solid #f0ebe4}
+.rh{padding:10px 14px;background:#f5f0eb;font-size:14px;color:#2c2c2c}
+.ri{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px}
+.ri img{width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;border-radius:3px}
+.fi{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fdfaf7;border-radius:10px;border:1px solid #f0ebe4;margin-bottom:8px}
+.fi a{color:#8b6914;text-decoration:none;font-size:14px}
+.fi a:hover{text-decoration:underline}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fdfaf7;padding:9px 11px;text-align:left;color:#666;font-weight:normal;border-bottom:2px solid #f0ebe4}
+td{padding:9px 11px;border-bottom:1px solid #f0ebe4;color:#2c2c2c}
+.total-row td{font-weight:bold;background:#fdfaf7;color:#8b6914}
+.badge{padding:2px 8px;border-radius:8px;background:#f3f4f6;font-size:11px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal.open{display:flex}
+</style>
+</head>
+<body>
+<div class="header">
+<div class="logo">* Дизайн <span>студия</span></div>
+<div class="sub">Ваш проект дизайна интерьера</div>
+</div>
+<div class="main">
+
+<div class="card">
+<div class="pt">{{ project.title }}</div>
+<div class="pc">{{ project.client_name }}</div>
+{% if project.address %}<div class="pc">📍 {{ project.address }}</div>{% endif %}
+{% if project.description %}<div class="pc" style="margin-top:10px;color:#666">{{ project.description }}</div>{% endif %}
+<div class="pm">
+<div class="pm-item"><div class="pm-label">Начало</div><div class="pm-val">{{ project.start_date or "—" }}</div></div>
+<div class="pm-item"><div class="pm-label">Окончание</div><div class="pm-val">{{ project.end_date or "—" }}</div></div>
+<div class="pm-item"><div class="pm-label">Бюджет</div><div class="pm-val">{{ "{:,.0f}".format(total_sum) }} ₽</div></div>
+</div>
+<div class="pb-wrap">
+<div class="pb-label"><span>Прогресс</span><span>{{ project.get_progress() }}%</span></div>
+<div class="pb"><div class="pf" style="width:{{ project.get_progress() }}%"></div></div>
+</div>
+</div>
+
+{% if client_docs %}
+<div class="card">
+<div class="card-title">📁 Документы проекта</div>
+{% for doc in client_docs %}
+<div class="fi">
+<span>{% if doc.file_type=='image' %}🖼{% elif doc.file_type=='pdf' %}📄{% else %}📁{% endif %}</span>
+<div>
+<a href="/uploads/{{ project.id }}/{{ doc.filename }}" target="_blank">{{ doc.original_name }}</a>
+<div style="font-size:11px;color:#aaa">{{ (doc.file_size/1024)|round(1) }} KB</div>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{% if viz_docs_by_room %}
+<div class="card">
+<div class="card-title">🖼 3D Визуализация</div>
+<div class="rg">
+{% for room in rooms %}
+{% if room.id in viz_docs_by_room %}
+<div class="rc">
+<div class="rh">{{ room.name }}</div>
+<div class="ri">
+{% for img in viz_docs_by_room[room.id] %}
+<img src="/uploads/{{ project.id }}/{{ img.filename }}" onclick="lb(this.src)">
+{% endfor %}
+</div>
+</div>
+{% endif %}
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+{% if spec_by_room %}
+<div class="card">
+<div class="card-title">📋 Ведомость материалов</div>
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th><th>Статус</th></tr></thead>
+<tbody>
+{% for rn, items in spec_by_room.items() %}
+<tr><td colspan="5" style="background:#f5f0eb;color:#8b6914;font-size:12px;padding:6px 11px">{{ rn }}</td></tr>
+{% for item in items %}
+<tr>
+<td>{{ item.item_name }}{% if item.article %}<br><small style="color:#aaa">{{ item.article }}</small>{% endif %}</td>
+<td>{{ item.quantity }} {{ item.unit }}</td>
+<td>{{ "{:,.0f}".format(item.price) }} ₽</td>
+<td>{{ "{:,.0f}".format(item.total) }} ₽</td>
+<td><span class="badge">{{ item.status }}</span></td>
+</tr>
+{% endfor %}
+{% endfor %}
+</tbody>
+<tfoot><tr class="total-row">
+<td colspan="3" style="text-align:right">Итого:</td>
+<td>{{ "{:,.0f}".format(total_sum) }} ₽</td>
+<td></td>
+</tr></tfoot>
+</table>
+</div>
+</div>
+{% endif %}
+
+</div>
+<div id="lbm" class="modal" onclick="this.classList.remove('open')">
+<img id="lbi" style="max-width:92vw;max-height:88vh;border-radius:10px">
+</div>
+<script>
+function lb(src){ document.getElementById('lbi').src=src; document.getElementById('lbm').classList.add('open'); }
+</script>
+</body>
+</html>

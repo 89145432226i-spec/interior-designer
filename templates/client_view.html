@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ project.title }} — YOMKO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f6f3;min-height:100vh}
+header{background:#fff;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+.logo-title{font-size:22px;font-weight:800;color:#2c2c2c;letter-spacing:3px}
+.logo-sub{font-size:10px;color:#c4a35a;letter-spacing:2px;font-weight:400;text-transform:uppercase}
+.container{max-width:900px;margin:0 auto;padding:32px 20px}
+.hero{background:linear-gradient(135deg,#2c2c2c,#4a4a4a);border-radius:16px;padding:32px;color:#fff;margin-bottom:28px}
+.hero-title{font-size:24px;font-weight:700;margin-bottom:6px}
+.hero-client{font-size:15px;color:#c4a35a;margin-bottom:20px}
+.progress-bar{background:rgba(255,255,255,.2);border-radius:10px;height:10px;margin-bottom:8px}
+.progress-fill{background:linear-gradient(90deg,#c4a35a,#e8c97a);height:10px;border-radius:10px}
+.progress-label{font-size:13px;color:rgba(255,255,255,.7);display:flex;justify-content:space-between}
+.info-row{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px}
+.info-pill{background:rgba(255,255,255,.1);border-radius:8px;padding:8px 14px;font-size:13px;color:rgba(255,255,255,.85)}
+.stages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:28px}
+.stage-card{background:#fff;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,0.05)}
+.stage-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.dot-done{background:#c4a35a}
+.dot-pending{background:#e5e7eb}
+cat >> ~/interior_designer/templates/client_view.html << 'EOF'
+.stage-name{font-size:13px;color:#555;font-weight:500}
+.stage-name.done{color:#2c2c2c;font-weight:600}
+.section-title{font-size:18px;font-weight:700;color:#2c2c2c;margin-bottom:16px}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);margin-bottom:20px}
+.file-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fafafa;border-radius:8px;border:1px solid #f0f0f0;margin-bottom:8px}
+.file-item-left{display:flex;align-items:center;gap:10px}
+.file-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.icon-img{background:#dbeafe}.icon-pdf{background:#fee2e2}.icon-doc{background:#e0e7ff}.icon-file{background:#f3f4f6}
+.file-name{font-size:13px;color:#2c2c2c;font-weight:500;text-decoration:none}
+.file-name:hover{color:#c4a35a}
+.file-size{font-size:11px;color:#aaa}
+.rooms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.room-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.room-header{padding:12px 16px;background:#faf9f7;border-bottom:1px solid #f0ede8}
+.room-name{font-size:14px;font-weight:600;color:#2c2c2c}
+.room-images{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px}
+.room-images img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity .2s}
+.room-images img:hover{opacity:.85}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;background:#faf9f7;color:#888;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #f0ede8}
+td{padding:10px 12px;border-bottom:1px solid #f9f9f9;color:#2c2c2c}
+.total-row td{font-weight:700;background:#faf9f7}
+.status-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.s-ordered{background:#d1fae5;color:#065f46}
+.s-received{background:#dbeafe;color:#1e40af}
+.s-installed{background:#e0e7ff;color:#3730a3}
+.s-pending{background:#f3f4f6;color:#6b7280}
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;align-items:center;justify-content:center}
+.lightbox.open{display:flex}
+.lightbox img{max-width:90vw;max-height:85vh;border-radius:10px}
+footer{text-align:center;padding:32px 20px;color:#bbb;font-size:13px}
+footer span{color:#c4a35a;font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-title">YOMKO</div>
+    <div class="logo-sub">Студия дизайна интерьеров</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ГЕРОЙ БЛОК -->
+  <div class="hero">
+    <div class="hero-title">{{ project.title }}</div>
+    <div class="hero-client">👤 {{ project.client_name }}</div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:{{ project.get_progress() }}%"></div>
+    </div>
+    <div class="progress-label">
+      <span>Прогресс проекта</span>
+      <span>{{ project.get_progress() }}%</span>
+    </div>
+    <div class="info-row">
+      {% if project.address %}
+      <div class="info-pill">📍 {{ project.address }}</div>
+      {% endif %}
+      {% if project.start_date %}
+      <div class="info-pill">📅 Начало: {{ project.start_date }}</div>
+      {% endif %}
+      {% if project.end_date %}
+      <div class="info-pill">🏁 Сдача: {{ project.end_date }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ЭТАПЫ -->
+  <div class="section-title">Этапы работы</div>
+  <div class="stages-grid" style="margin-bottom:28px">
+    {% set stages = [
+      ('Бриф и ТЗ', project.stage_brief),
+      ('Обмеры', project.stage_measurements),
+      ('Концепция', project.stage_concept),
+      ('Планировка', project.stage_planning),
+      ('Чертежи', project.stage_drawings),
+      ('Визуализация', project.stage_visualization),
+      ('Комплектация', project.stage_procurement),
+      ('Сдача объекта', project.stage_completion)
+    ] %}
+    {% for label, done in stages %}
+    <div class="stage-card">
+      <div class="stage-dot {% if done %}dot-done{% else %}dot-pending{% endif %}"></div>
+      <div class="stage-name {% if done %}done{% endif %}">{{ label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ДОКУМЕНТЫ -->
+  {% set doc_cats = [
+    ('contract','📄 Договор'),
+    ('planning','📐 Планировка'),
+    ('collages','🎨 Коллажи'),
+    ('drawings','📏 Чертежи')
+  ] %}
+  {% for cat, lbl in doc_cats %}
+    {% if docs_by_category.get(cat) %}
+    <div class="section-title">{{ lbl }}</div>
+    <div class="card">
+      {% for doc in docs_by_category[cat] %}
+      <div class="file-item">
+        <div class="file-item-left">
+          <div class="file-icon {% if doc.file_type=='image' %}icon-img{% elif doc.file_type=='pdf' %}icon-pdf{% elif doc.file_type=='word' %}icon-doc{% else %}icon-file{% endif %}">
+            {% if doc.file_type=='image' %}🖼️{% elif doc.file_type=='pdf' %}📕{% elif doc.file_type=='word' %}📘{% else %}📎{% endif %}
+          </div>
+          <div>
+            <a href="/uploads/{{ project.id }}/{{ doc.filename }}" target="_blank" class="file-name">{{ doc.original_name }}</a>
+            <div class="file-size">{{ (doc.file_size/1024)|round(1) }} KB</div>
+          </div>
+        </div>
+        <span style="font-size:12px;color:#c4a35a">↓ Скачать</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  <!-- ВИЗУАЛИЗАЦИЯ -->
+  {% if rooms %}
+  <div class="section-title">🏠 3D Визуализация</div>
+  <div class="rooms-grid" style="margin-bottom:28px">
+    {% for room in rooms %}
+      {% if room.images %}
+      <div class="room-card">
+        <div class="room-header">
+          <div class="room-name">{{ room.name }}</div>
+        </div>
+        <div class="room-images">
+          {% for img in room.images %}
+          <img src="/uploads/{{ project.id }}/{{ img.filename }}"
+               onclick="openLightbox(this.src)" alt="{{ room.name }}">
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ВЕДОМОСТЬ -->
+  {% if spec_by_room %}
+  <div class="section-title">📋 Ведомость комплектации</div>
+  <div class="card" style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Комната</th><th>Наименование</th><th>Кол-во</th>
+          <th>Ед</th><th>Цена</th><th>Сумма</th><th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rn, items in spec_by_room.items() %}
+          {% for item in items %}
+          <tr>
+            <td>{{ item.room_name or '—' }}</td>
+            <td>
+              {{ item.item_name }}
+              {% if item.article %}<br><small style="color:#aaa">{{ item.article }}</small>{% endif %}
+            </td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.unit }}</td>
+            <td>{{ "{:,.0f}".format(item.price) }} ₽</td>
+            <td>{{ "{:,.0f}".format(item.total) }} ₽</td>
+            <td>
+              <span class="status-badge
+                {% if item.status=='заказано' %}s-ordered
+                {% elif item.status=='получено' %}s-received
+                {% elif item.status=='установлено' %}s-installed
+                {% else %}s-pending{% endif %}">
+                {{ item.status }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="5" style="text-align:right;font-weight:700">Итого:</td>
+          <td>{{ "{:,.0f}".format(total_sum) }} ₽</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+
+<footer>
+  Проект подготовлен студией <span>YOMKO</span> · Дизайн интерьеров
+</footer>
+
+<!-- ЛАЙТБОКС -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+</script>
+</body>
+</html>

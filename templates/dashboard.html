@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Проекты — YOMKO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f6f3;min-height:100vh}
+nav{background:#fff;padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+.nav-logo{font-size:20px;font-weight:800;color:#2c2c2c;letter-spacing:3px}
+.nav-logo span{font-size:11px;color:#c4a35a;letter-spacing:2px;display:block;font-weight:400;text-transform:uppercase}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-user{font-size:14px;color:#666}
+.btn{padding:9px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-gold{background:#c4a35a;color:#fff}
+.btn-gold:hover{background:#b8923d}
+.btn-outline{background:#fff;color:#555;border:1.5px solid #e5e7eb}
+.btn-outline:hover{border-color:#c4a35a;color:#c4a35a}
+.container{max-width:1200px;margin:0 auto;padding:32px 24px}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+h1{font-size:26px;color:#2c2c2c;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.stat{background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.stat-num{font-size:32px;font-weight:700;color:#c4a35a}
+.stat-label{font-size:13px;color:#888;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.card{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .2s,box-shadow .2s;cursor:pointer;text-decoration:none;display:block;color:inherit}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.1)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.card-title{font-size:16px;font-weight:700;color:#2c2c2c}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-active{background:#d1fae5;color:#065f46}
+.badge-done{background:#e0e7ff;color:#3730a3}
+.card-client{font-size:13px;color:#888;margin-bottom:12px}
+.progress-bar{background:#f3f4f6;border-radius:10px;height:6px;margin-bottom:8px}
+.progress-fill{background:#c4a35a;height:6px;border-radius:10px;transition:width .3s}
+.progress-text{font-size:12px;color:#aaa}
+.card-footer{margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;font-size:12px;color:#bbb}
+.empty{text-align:center;padding:60px 20px;color:#aaa}
+.empty-icon{font-size:48px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">YOMKO<span>Студия дизайна интерьеров</span></div>
+  <div class="nav-right">
+    <span class="nav-user">{{ current_user.full_name or current_user.username }}</span>
+    <a href="/logout" class="btn btn-outline">Выйти</a>
+  </div>
+</nav>
+<div class="container">
+  <div class="page-header">
+    <h1>Мои проекты</h1>
+    <a href="/project/new" class="btn btn-gold">+ Новый проект</a>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">{{ projects|length }}</div>
+      <div class="stat-label">Всего проектов</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">{{ projects|selectattr('get_progress','lt',100)|list|length }}</div>
+      <div class="stat-label">В работе</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">{{ projects|selectattr('get_progress','eq',100)|list|length }}</div>
+      <div class="stat-label">Завершено</div>
+    </div>
+  </div>
+  {% if projects %}
+  <div class="grid">
+    {% for p in projects %}
+    <a href="/project/{{ p.id }}" class="card">
+      <div class="card-header">
+        <div class="card-title">{{ p.title }}</div>
+        <span class="badge {% if p.get_progress()==100 %}badge-done{% else %}badge-active{% endif %}">
+          {% if p.get_progress()==100 %}Завершён{% else %}В работе{% endif %}
+        </span>
+      </div>
+      <div class="card-client">👤 {{ p.client_name }}{% if p.address %} · {{ p.address }}{% endif %}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:{{ p.get_progress() }}%"></div></div>
+      <div class="progress-text">Прогресс: {{ p.get_progress() }}%</div>
+      <div class="card-footer">
+        <span>{% if p.start_date %}Начало: {{ p.start_date }}{% endif %}</span>
+        <span>{% if p.end_date %}Сдача: {{ p.end_date }}{% endif %}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">🏠</div>
+    <div style="font-size:18px;margin-bottom:8px;color:#555">Проектов пока нет</div>
+    <div style="margin-bottom:20px">Создайте первый дизайн-проект</div>
+    <a href="/project/new" class="btn btn-gold">+ Создать проект</a>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>

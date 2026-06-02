@@ -1,0 +1,143 @@
+{% for cat,lbl in [("contract","Договор"),("planning","Планировка"),("collages","Коллажи"),("drawings","Чертежи")] %}
+<div id="tab-{{ cat }}" class="tc{% if cat=='contract' %} active{% endif %}">
+<div class="card">
+<h3 style="margin-bottom:15px;color:#2c2c2c">{{ lbl }}</h3>
+<div class="ua"><input type="file" id="up-{{ cat }}" multiple onchange="uploadF(this,'{{ cat }}')">
+<div style="color:#888;font-size:13px" onclick="document.getElementById('up-{{ cat }}').click()">Нажмите для загрузки файлов</div>
+</div>
+<div class="fl" id="fl-{{ cat }}">
+{% for doc in docs_by_category.get(cat,[]) %}
+<div class="fi" id="doc-{{ doc.id }}">
+<div style="display:flex;align-items:center;gap:10px">
+<span>{% if doc.file_type=='image' %}[IMG]{% elif doc.file_type=='pdf' %}[PDF]{% elif doc.file_type=='word' %}[DOC]{% else %}[FILE]{% endif %}</span>
+<div><a href="/uploads/{{ project.id }}/{{ doc.filename }}" target="_blank" style="color:#8b6914;font-size:14px">{{ doc.original_name }}</a>
+<div style="font-size:11px;color:#aaa">{{ (doc.file_size/1024)|round(1) }} KB</div></div>
+</div>
+<button class="btn btn-sm btn-danger" onclick="delDoc({{ doc.id }})">Del</button>
+</div>
+{% endfor %}
+</div></div></div>
+{% endfor %}
+<div id="tab-visualization" class="tc">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+<h3 style="color:#2c2c2c">3D Визуализация</h3>
+<button class="btn btn-sm" onclick="openModal('modal-room')">+ Комната</button>
+</div>
+{% if rooms %}
+<div class="rg">
+{% for room in rooms %}
+<div class="rc" id="room-{{ room.id }}">
+<div class="rh"><span>{{ room.name }}</span>
+<button class="btn btn-sm btn-danger" onclick="delRoom({{ room.id }})">Del</button></div>
+<div class="ri" id="ri-{{ room.id }}">
+{% for img in room.images %}
+<img src="/uploads/{{ project.id }}/{{ img.filename }}" onclick="lightbox(this.src)">
+{% endfor %}
+</div>
+<div class="ua" style="padding:10px">
+<input type="file" id="up-room-{{ room.id }}" multiple accept="image/*" onchange="uploadRoom(this,{{ room.id }})">
+<span style="font-size:12px;color:#aaa;cursor:pointer" onclick="document.getElementById('up-room-{{ room.id }}').click()">+ Фото</span>
+</div></div>
+{% endfor %}
+</div>
+{% else %}
+<div style="text-align:center;padding:40px;color:#aaa">Добавьте комнаты для загрузки визуализации</div>
+{% endif %}
+</div></div>
+<div id="tab-specification" class="tc">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+<h3 style="color:#2c2c2c">Ведомость</h3>
+<button class="btn btn-sm" onclick="openAddSpec()">+ Позиция</button>
+</div>
+<div style="overflow-x:auto"><table>
+<thead><tr><th>Комната</th><th>Категория</th><th>Наименование</th><th>Кол-во</th><th>Ед</th><th>Цена</th><th>Сумма</th><th>Статус</th><th>Действия</th></tr></thead>
+<tbody id="spec-tb">
+{% for rn,items in spec_by_room.items() %}{% for item in items %}
+<tr id="sr-{{ item.id }}">
+<td>{{ item.room_name or "-" }}</td><td>{{ item.category or "-" }}</td>
+<td>{{ item.item_name }}{% if item.article %}<br><small style="color:#aaa">{{ item.article }}</small>{% endif %}</td>
+<td>{{ item.quantity }}</td><td>{{ item.unit }}</td>
+<td>{{ "{:,.0f}".format(item.price) }}</td><td>{{ "{:,.0f}".format(item.total) }}</td>
+<td><span style="padding:2px 8px;border-radius:8px;background:#f3f4f6;font-size:11px">{{ item.status }}</span></td>
+<td style="white-space:nowrap">
+<button class="btn btn-sm btn-outline" onclick="editSpec({{ item.id }},'{{ item.room_name or '' }}','{{ item.category or '' }}','{{ item.item_name }}','{{ item.article or '' }}','{{ item.supplier or '' }}',{{ item.quantity }},'{{ item.unit }}',{{ item.price }},'{{ item.comment or '' }}','{{ item.status }}')">Ред</button>
+<button class="btn btn-sm btn-danger" onclick="delSpec({{ item.id }})">Del</button>
+</td></tr>
+{% endfor %}{% endfor %}
+</tbody>
+<tfoot><tr class="total-row"><td colspan="6" style="text-align:right">Итого:</td>
+<td id="tot">{{ "{:,.0f}".format(total_sum) }}</td><td colspan="2"></td></tr></tfoot>
+</table></div></div></div>
+<div id="modal-link" class="modal"><div class="mb">
+<div class="mt2">Ссылка для клиента</div>
+<p style="color:#666;font-size:14px;margin-bottom:10px">Отправьте эту ссылку клиенту:</p>
+<div class="lbox" id="cl-url">Загрузка...</div>
+<div style="display:flex;gap:10px;margin-top:15px">
+<button class="btn" onclick="copyL()">Копировать</button>
+<button class="btn btn-outline" onclick="closeModal('modal-link')">Закрыть</button>
+</div></div></div>
+<div id="modal-edit" class="modal"><div class="mb">
+<div class="mt2">Редактировать проект</div>
+<form method="POST" action="/project/{{ project.id }}/edit">
+<div class="fg"><label>Название</label><input name="title" value="{{ project.title }}" required></div>
+<div class="fr">
+<div class="fg"><label>Клиент</label><input name="client_name" value="{{ project.client_name }}" required></div>
+<div class="fg"><label>Телефон</label><input name="client_phone" value="{{ project.client_phone or '' }}"></div>
+</div>
+<div class="fr">
+<div class="fg"><label>Email</label><input name="client_email" value="{{ project.client_email or '' }}"></div>
+<div class="fg"><label>Адрес</label><input name="address" value="{{ project.address or '' }}"></div>
+</div>
+<div class="fr">
+<div class="fg"><label>Начало</label><input type="date" name="start_date" value="{{ project.start_date or '' }}"></div>
+<div class="fg"><label>Конец</label><input type="date" name="end_date" value="{{ project.end_date or '' }}"></div>
+</div>
+<div class="fg"><label>Описание</label><textarea name="description" rows="3">{{ project.description or '' }}</textarea></div>
+<div style="display:flex;gap:10px">
+<button type="submit" class="btn">Сохранить</button>
+<button type="button" class="btn btn-outline" onclick="closeModal('modal-edit')">Отмена</button>
+</div></form></div></div>
+<div id="modal-room" class="modal"><div class="mb">
+<div class="mt2">Добавить комнату</div>
+<div class="fg"><label>Название</label><input id="rni" placeholder="Гостиная, Спальня..."></div>
+<div style="display:flex;gap:10px">
+<button class="btn" onclick="addRoom()">Добавить</button>
+<button class="btn btn-outline" onclick="closeModal('modal-room')">Отмена</button>
+</div></div></div>
+<div id="modal-spec" class="modal"><div class="mb">
+<div class="mt2" id="spec-title">Добавить позицию</div>
+<input type="hidden" id="spec-id">
+<div class="fr">
+<div class="fg"><label>Комната</label><input id="s-room" placeholder="Гостиная"></div>
+<div class="fg"><label>Категория</label><input id="s-cat" placeholder="Мебель..."></div>
+</div>
+<div class="fg"><label>Наименование</label><input id="s-name" placeholder="Диван угловой"></div>
+<div class="fr">
+<div class="fg"><label>Артикул</label><input id="s-art" placeholder="ABC-123"></div>
+<div class="fg"><label>Поставщик</label><input id="s-sup" placeholder="IKEA"></div>
+</div>
+<div class="fr">
+<div class="fg"><label>Количество</label><input type="number" id="s-qty" value="1" min="0" step="0.1"></div>
+<div class="fg"><label>Единица</label>
+<select id="s-unit"><option value="шт">шт</option><option value="м">м</option>
+<option value="м2">м2</option><option value="м3">м3</option><option value="комп">комп</option>
+</select></div>
+</div>
+<div class="fr">
+<div class="fg"><label>Цена</label><input type="number" id="s-price" value="0" min="0"></div>
+<div class="fg"><label>Статус</label>
+<select id="s-status">
+<option value="не заказано">Не заказано</option><option value="заказано">Заказано</option>
+<option value="получено">Получено</option><option value="установлено">Установлено</option>
+</select></div>
+</div>
+<div class="fg"><label>Комментарий</label><textarea id="s-comm" rows="2"></textarea></div>
+<div style="display:flex;gap:10px">
+<button class="btn" onclick="saveSpec()">Сохранить</button>
+<button class="btn btn-outline" onclick="closeModal('modal-spec')">Отмена</button>
+</div></div></div>
+<div id="lightbox-m" class="modal" onclick="closeModal('lightbox-m')">
+<img id="lb-img" style="max-width:90vw;max-height:85vh;border-radius:10px">
+</div>
