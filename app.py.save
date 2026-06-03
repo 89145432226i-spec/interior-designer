@@ -220,9 +220,7 @@ def upload_document(project_id):
     category = request.form.get('category', 'other')
     description = request.form.get('description', '')
     room_id = request.form.get('room_id')
-    filename, original_name, file_type, file_size = save_file(file, project_id)
-        files = request.files.getlist('file')if filename:
-        doc = Document(
+т        doc = Document(
             filename=filename, original_name=original_name,
             file_type=file_type, file_size=file_size,
             category=category, description=description,
