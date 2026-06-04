@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ project.title }} — YOMKO</title>
+<title>Проект — YOMKO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f6f3;min-height:100vh}
@@ -26,11 +26,12 @@ nav{background:#fff;padding:0 24px;height:60px;display:flex;align-items:center;j
 .progress-fill{background:linear-gradient(90deg,#c4a35a,#e8c97a);height:8px;border-radius:10px;transition:width .5s}
 .progress-label{font-size:12px;color:#aaa;display:flex;justify-content:space-between}
 .section-label{font-size:10px;font-weight:700;color:#c4a35a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;margin-top:20px}
-.stage-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background .2s}
+.stage-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;transition:background .2s}
 .stage-item:hover{background:#faf9f7}
 .stage-item input[type=checkbox]{accent-color:#c4a35a;width:16px;height:16px;cursor:pointer}
 .stage-item label{font-size:13px;color:#555;cursor:pointer;flex:1}
 .stage-item.done label{color:#aaa;text-decoration:line-through}
+.sidebar-btn{width:100%;margin-bottom:6px;justify-content:flex-start;text-align:left}
 .tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}
 .tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:#f3f4f6;color:#666;transition:all .2s}
 .tab.active{background:#c4a35a;color:#fff}
@@ -67,9 +68,6 @@ tr:hover td{background:#fdfcfb}
 .s-received{background:#dbeafe;color:#1e40af}
 .s-installed{background:#e0e7ff;color:#3730a3}
 .s-pending{background:#f3f4f6;color:#6b7280}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.info-item label{font-size:11px;color:#aaa;font-weight:500;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
-.info-item p{font-size:14px;color:#2c2c2c}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
 .modal.open{display:flex}
 .modal-box{background:#fff;border-radius:16px;padding:28px;width:90%;max-width:520px;max-height:90vh;overflow-y:auto}
@@ -83,513 +81,563 @@ tr:hover td{background:#fdfcfb}
 .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;align-items:center;justify-content:center}
 .lightbox.open{display:flex}
 .lightbox img{max-width:90vw;max-height:85vh;border-radius:10px}
-.client-info{background:linear-gradient(135deg,#c4a35a15,#e8c97a10);border:1px solid #c4a35a30;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:#666}
+.viz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.viz-item{background:#f9f7f4;border-radius:12px;overflow:hidden;text-align:center;padding-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.viz-item img{width:100%;height:160px;object-fit:cover;cursor:pointer;display:block}
+.viz-name{font-size:12px;color:#aaa;padding:8px 8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
-cat >> ~/interior_designer/templates/project.html << 'EOF'
 <body>
+
 <nav>
-  <a href="/dashboard" class="nav-logo">YOMKO<span>Студия дизайна интерьеров</span></a>
+  <a href="#" class="nav-logo">YOMKO<span>СТУДИЯ ДИЗАЙНА ИНТЕРЬЕРОВ</span></a>
   <div class="nav-right">
-    <button class="btn btn-outline btn-sm" onclick="openModal('modal-link')">🔗 Ссылка клиенту</button>
-    <button class="btn btn-outline btn-sm" onclick="openModal('modal-edit')">✏️ Редактировать</button>
-    <a href="/dashboard" class="btn btn-outline btn-sm">← Назад</a>
+    <button onclick="openShareModal()" class="btn btn-outline">🔗 Поделиться</button>
+    <button onclick="openEditModal()" class="btn btn-gold">✏️ Редактировать</button>
   </div>
 </nav>
 
 <div class="layout">
+
   <!-- SIDEBAR -->
   <div class="sidebar">
-    <div class="proj-title">{{ project.title }}</div>
-    <div class="proj-client">👤 {{ project.client_name }}</div>
+    <div class="proj-title" id="sideTitle">Мой проект</div>
+    <div class="proj-client" id="sideClient">Клиент</div>
 
     <div class="progress-wrap">
       <div class="progress-bar">
-        <div class="progress-fill" id="prog-fill" style="width:{{ project.get_progress() }}%"></div>
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
       </div>
       <div class="progress-label">
-        <span>Прогресс проекта</span>
-        <span id="prog-text">{{ project.get_progress() }}%</span>
+        <span>Прогресс</span>
+        <span id="progressText">0%</span>
       </div>
     </div>
 
-    <div class="section-label">Этапы работы</div>
-    {% set stages = [
-      ('brief','Бриф и ТЗ', project.stage_brief),
-      ('measurements','Обмеры', project.stage_measurements),
-      ('concept','Концепция', project.stage_concept),
-      ('planning','Планировка', project.stage_planning),
-      ('drawings','Чертежи', project.stage_drawings),
-      ('visualization','Визуализация', project.stage_visualization),
-      ('procurement','Комплектация', project.stage_procurement),
-      ('completion','Сдача объекта', project.stage_completion)
-    ] %}
-    {% for key, label, checked in stages %}
-    <div class="stage-item {% if checked %}done{% endif %}" id="stage-{{ key }}">
-      <input type="checkbox" id="cb-{{ key }}" {% if checked %}checked{% endif %}
-             onchange="toggleStage('{{ key }}', this.checked)">
-      <label for="cb-{{ key }}">{{ label }}</label>
-    </div>
-    {% endfor %}
+    <div class="section-label">Документы</div>
+    <button onclick="switchTab('files',event)" class="btn btn-outline btn-sm sidebar-btn">📁 Договор</button>
+    <button onclick="switchTab('viz',event)" class="btn btn-outline btn-sm sidebar-btn">🎨 Визуализация</button>
+    <button onclick="switchTab('rooms',event)" class="btn btn-outline btn-sm sidebar-btn">📐 Планировочные решения</button>
+    <button onclick="switchTab('materials',event)" class="btn btn-outline btn-sm sidebar-btn">📦 Материалы</button>
+    <button onclick="switchTab('notes',event)" class="btn btn-outline btn-sm sidebar-btn">📝 Заметки</button>
 
-    <div class="section-label" style="margin-top:24px">Информация</div>
-    {% if project.client_phone %}
-    <div style="font-size:12px;color:#666;margin-bottom:6px">📞 {{ project.client_phone }}</div>
-    {% endif %}
-    {% if project.client_email %}
-    <div style="font-size:12px;color:#666;margin-bottom:6px">✉️ {{ project.client_email }}</div>
-    {% endif %}
-    {% if project.address %}
-    <div style="font-size:12px;color:#666;margin-bottom:6px">📍 {{ project.address }}</div>
-    {% endif %}
-    {% if project.start_date %}
-    <div style="font-size:12px;color:#666;margin-bottom:6px">📅 {{ project.start_date }}{% if project.end_date %} → {{ project.end_date }}{% endif %}</div>
-    {% endif %}
+    <div class="section-label">Этапы проекта</div>
+    <div id="stagesList"></div>
+    <button onclick="openStageModal()" class="btn btn-outline btn-sm" style="width:100%;margin-top:10px">+ Добавить этап</button>
   </div>
 
   <!-- MAIN -->
   <div class="main">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('contract',this)">📄 Договор</button>
-      <button class="tab" onclick="showTab('planning',this)">📐 Планировка</button>
-      <button class="tab" onclick="showTab('collages',this)">🎨 Коллажи</button>
-      <button class="tab" onclick="showTab('drawings',this)">📏 Чертежи</button>
-      <button class="tab" onclick="showTab('visualization',this)">🏠 Визуализация</button>
-      <button class="tab" onclick="showTab('specification',this)">📋 Ведомость</button>
+      <button class="tab active" onclick="switchTab('files',event)">📁 Договор</button>
+      <button class="tab" onclick="switchTab('viz',event)">🎨 Визуализация</button>
+      <button class="tab" onclick="switchTab('rooms',event)">📐 Планировка</button>
+      <button class="tab" onclick="switchTab('materials',event)">📦 Материалы</button>
+      <button class="tab" onclick="switchTab('notes',event)">📝 Заметки</button>
     </div>
 
-    <!-- ВКЛАДКИ ДОКУМЕНТОВ -->
-    {% for cat, lbl in [('contract','Договор'),('planning','Планировка'),('collages','Коллажи'),('drawings','Чертежи')] %}
-    <div id="tab-{{ cat }}" class="tab-content {% if cat=='contract' %}active{% endif %}">
+    <!-- ДОГОВОР / ФАЙЛЫ -->
+    <div id="tab-files" class="tab-content active">
       <div class="card">
-        <h3 style="margin-bottom:16px;color:#2c2c2c;font-size:16px">{{ lbl }}</h3>
-        <div class="upload-area" onclick="document.getElementById('up-{{ cat }}').click()">
-          <input type="file" id="up-{{ cat }}" multiple onchange="uploadFiles(this,'{{ cat }}')">
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" multiple onchange="handleFiles(this.files)">
           <div class="upload-icon">📎</div>
-          <div class="upload-text">Нажмите для загрузки файлов<br><small>или перетащите сюда</small></div>
+          <div class="upload-text">Нажмите чтобы загрузить файлы<br><small>Любые форматы</small></div>
         </div>
-        <div class="file-list" id="fl-{{ cat }}">
-          {% for doc in docs_by_category.get(cat,[]) %}
-          <div class="file-item" id="doc-{{ doc.id }}">
-            <div class="file-item-left">
-              <div class="file-icon {% if doc.file_type=='image' %}icon-img{% elif doc.file_type=='pdf' %}icon-pdf{% elif doc.file_type=='word' %}icon-doc{% else %}icon-file{% endif %}">
-                {% if doc.file_type=='image' %}🖼️{% elif doc.file_type=='pdf' %}📕{% elif doc.file_type=='word' %}📘{% else %}📎{% endif %}
-              </div>
-              <div>
-                <a href="/uploads/{{ project.id }}/{{ doc.filename }}" target="_blank" class="file-name" style="text-decoration:none;color:#2c2c2c">{{ doc.original_name }}</a>
-                <div class="file-size">{{ (doc.file_size/1024)|round(1) }} KB</div>
-              </div>
-            </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteDoc({{ doc.id }})">✕</button>
-          </div>
-          {% endfor %}
-        </div>
+        <div class="file-list" id="fileList"></div>
       </div>
     </div>
-    {% endfor %}
 
     <!-- ВИЗУАЛИЗАЦИЯ -->
-    <div id="tab-visualization" class="tab-content">
+    <div id="tab-viz" class="tab-content">
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h3 style="color:#2c2c2c;font-size:16px">3D Визуализация</h3>
-          <button class="btn btn-gold btn-sm" onclick="openModal('modal-room')">+ Комната</button>
+        <div class="upload-area" onclick="document.getElementById('vizInput').click()">
+          <input type="file" id="vizInput" accept="image/*" multiple onchange="handleVizFiles(this.files)">
+          <div class="upload-icon">🎨</div>
+          <div class="upload-text">Нажмите чтобы загрузить изображения<br><small>JPG, PNG, WEBP</small></div>
         </div>
-        {% if rooms %}
-        <div class="rooms-grid">
-          {% for room in rooms %}
-          <div class="room-card" id="room-{{ room.id }}">
-            <div class="room-header">
-              <span class="room-name">{{ room.name }}</span>
-              <button class="btn btn-danger btn-sm" onclick="deleteRoom({{ room.id }})">✕</button>
-            </div>
-            <div class="room-images" id="ri-{{ room.id }}">
-              {% for img in room.images %}
-              <img src="/uploads/{{ project.id }}/{{ img.filename }}" onclick="openLightbox(this.src)" alt="{{ img.original_name }}">
-              {% endfor %}
-            </div>
-            <div class="room-upload">
-              <input type="file" id="up-room-{{ room.id }}" multiple accept="image/*" onchange="uploadRoomImages(this,{{ room.id }})">
-              <button class="btn btn-outline btn-sm" style="width:100%" onclick="document.getElementById('up-room-{{ room.id }}').click()">+ Добавить фото</button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div style="text-align:center;padding:40px;color:#aaa">
-          <div style="font-size:36px;margin-bottom:12px">🏠</div>
-          <div>Добавьте комнаты для загрузки визуализации</div>
-        </div>
-        {% endif %}
+        <div class="viz-grid" id="vizGrid"></div>
       </div>
     </div>
 
-    <!-- ВЕДОМОСТЬ -->
-    <div id="tab-specification" class="tab-content">
+    <!-- ПЛАНИРОВОЧНЫЕ РЕШЕНИЯ -->
+    <div id="tab-rooms" class="tab-content">
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <h3 style="color:#2c2c2c;font-size:16px">Ведомость комплектации</h3>
-          <button class="btn btn-gold btn-sm" onclick="openAddSpec()">+ Позиция</button>
+        <div class="upload-area" onclick="document.getElementById('planInput').click()">
+          <input type="file" id="planInput" accept="image/*,.pdf" multiple onchange="handlePlanFiles(this.files)">
+          <div class="upload-icon">📐</div>
+          <div class="upload-text">Нажмите чтобы загрузить планировки<br><small>JPG, PNG, PDF</small></div>
         </div>
-        <div style="overflow-x:auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Комната</th><th>Категория</th><th>Наименование</th>
-                <th>Кол-во</th><th>Ед</th><th>Цена</th><th>Сумма</th>
-                <th>Статус</th><th>Действия</th>
-              </tr>
-            </thead>
-            <tbody id="spec-tbody">
-              {% for rn, items in spec_by_room.items() %}
-                {% for item in items %}
-                <tr id="sr-{{ item.id }}">
-                  <td>{{ item.room_name or '—' }}</td>
-                  <td>{{ item.category or '—' }}</td>
-                  <td>
-                    {{ item.item_name }}
-                    {% if item.article %}<br><small style="color:#aaa">{{ item.article }}</small>{% endif %}
-                  </td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ item.unit }}</td>
-                  <td>{{ "{:,.0f}".format(item.price) }} ₽</td>
-                  <td>{{ "{:,.0f}".format(item.total) }} ₽</td>
-                  <td>
-                    <span class="status-badge {% if item.status=='заказано' %}s-ordered{% elif item.status=='получено' %}s-received{% elif item.status=='установлено' %}s-installed{% else %}s-pending{% endif %}">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td style="white-space:nowrap">
-                    <button class="btn btn-outline btn-sm" onclick="openEditSpec({{ item.id }},'{{ item.room_name or '' }}','{{ item.category or '' }}','{{ item.item_name }}','{{ item.article or '' }}','{{ item.supplier or '' }}',{{ item.quantity }},'{{ item.unit }}',{{ item.price }},'{{ item.status }}','{{ item.comment or '' }}')">✏️</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSpec({{ item.id }})">✕</button>
-                  </td>
-                </tr>
-                {% endfor %}
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr class="total-row">
-                <td colspan="6" style="text-align:right;font-weight:700">Итого:</td>
-                <td id="total-sum">{{ "{:,.0f}".format(total_sum) }} ₽</td>
-                <td colspan="2"></td>
-              </tr>
-            </tfoot>
-          </table>
+        <div class="viz-grid" id="planGrid"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button onclick="openRoomModal()" class="btn btn-gold">+ Добавить помещение</button>
+      </div>
+      <div class="rooms-grid" id="roomsGrid"></div>
+    </div>
+
+    <!-- МАТЕРИАЛЫ -->
+    <div id="tab-materials" class="tab-content">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button onclick="openMaterialModal()" class="btn btn-gold">+ Добавить материал</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Наименование</th>
+              <th>Помещение</th>
+              <th>Кол-во</th>
+              <th>Цена</th>
+              <th>Сумма</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="materialsBody"></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4">Итого</td>
+              <td id="totalSum">0 ₽</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ЗАМЕТКИ -->
+    <div id="tab-notes" class="tab-content">
+      <div class="card">
+        <div class="fg">
+          <label>Заметки по проекту</label>
+          <textarea id="notesArea" rows="12" placeholder="Введите заметки..." style="resize:vertical" oninput="saveNotes()"></textarea>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- МОДАЛЬНЫЕ ОКНА -->
-
-<!-- Ссылка клиенту -->
-<div id="modal-link" class="modal">
-  <div class="modal-box">
-    <div class="modal-title">🔗 Ссылка для клиента</div>
-    <p style="color:#666;font-size:14px;margin-bottom:12px">Отправьте эту ссылку клиенту — он увидит прогресс и документы:</p>
-    <div class="link-box" id="client-url">Загрузка...</div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-gold" onclick="copyLink()">📋 Копировать</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-link')">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-<!-- Редактировать проект -->
-<div id="modal-edit" class="modal">
+<!-- МОДАЛКА: Редактировать -->
+<div class="modal" id="editModal">
   <div class="modal-box">
     <div class="modal-title">✏️ Редактировать проект</div>
-    <form method="POST" action="/project/{{ project.id }}/edit">
-      <div class="fg"><label>Название</label><input name="title" value="{{ project.title }}" required></div>
-      <div class="fg-row">
-        <div class="fg"><label>Клиент</label><input name="client_name" value="{{ project.client_name }}" required></div>
-        <div class="fg"><label>Телефон</label><input name="client_phone" value="{{ project.client_phone or '' }}"></div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label>Email</label><input name="client_email" value="{{ project.client_email or '' }}"></div>
-        <div class="fg"><label>Адрес</label><input name="address" value="{{ project.address or '' }}"></div>
-      </div>
-      <div class="fg-row">
-        <div class="fg"><label>Начало</label><input type="date" name="start_date" value="{{ project.start_date or '' }}"></div>
-        <div class="fg"><label>Сдача</label><input type="date" name="end_date" value="{{ project.end_date or '' }}"></div>
-      </div>
-      <div class="fg"><label>Описание</label><textarea name="description" rows="3">{{ project.description or '' }}</textarea></div>
-      <div style="display:flex;gap:10px">
-        <button type="submit" class="btn btn-gold">Сохранить</button>
-        <button type="button" class="btn btn-outline" onclick="closeModal('modal-edit')">Отмена</button>
-      </div>
-    </form>
+    <div class="fg"><label>Название</label><input id="editTitle" type="text"></div>
+    <div class="fg"><label>Клиент</label><input id="editClient" type="text"></div>
+    <div class="fg"><label>Адрес</label><input id="editAddress" type="text"></div>
+    <div class="fg-row">
+      <div class="fg"><label>Площадь (м²)</label><input id="editArea" type="number"></div>
+      <div class="fg"><label>Бюджет (₽)</label><input id="editBudget" type="number"></div>
+    </div>
+    <div class="fg"><label>Описание</label><textarea id="editDesc" rows="3"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('editModal')" class="btn btn-outline">Отмена</button>
+      <button onclick="saveEdit()" class="btn btn-gold">Сохранить</button>
+    </div>
   </div>
 </div>
 
-<!-- Добавить комнату -->
-<div id="modal-room" class="modal">
+<!-- МОДАЛКА: Этап -->
+<div class="modal" id="stageModal">
   <div class="modal-box">
-    <div class="modal-title">🏠 Добавить комнату</div>
-    <div class="fg"><label>Название комнаты</label><input id="room-name-input" placeholder="Гостиная, Спальня, Кухня..."></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-gold" onclick="addRoom()">Добавить</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-room')">Отмена</button>
+    <div class="modal-title">➕ Новый этап</div>
+    <div class="fg"><label>Название этапа</label><input id="stageName" type="text" placeholder="Например: Согласование планировки"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('stageModal')" class="btn btn-outline">Отмена</button>
+      <button onclick="addStage()" class="btn btn-gold">Добавить</button>
     </div>
   </div>
 </div>
 
-<!-- Добавить/редактировать позицию -->
-<div id="modal-spec" class="modal">
+<!-- МОДАЛКА: Помещение -->
+<div class="modal" id="roomModal">
   <div class="modal-box">
-    <div class="modal-title" id="spec-modal-title">Добавить позицию</div>
-    <input type="hidden" id="spec-edit-id">
-    <div class="fg-row">
-      <div class="fg"><label>Комната</label><input id="s-room" placeholder="Гостиная"></div>
-      <div class="fg"><label>Категория</label><input id="s-cat" placeholder="Мебель, Свет..."></div>
-    </div>
-    <div class="fg"><label>Наименование *</label><input id="s-name" placeholder="Диван угловой"></div>
-    <div class="fg-row">
-      <div class="fg"><label>Артикул</label><input id="s-art" placeholder="ABC-123"></div>
-      <div class="fg"><label>Поставщик</label><input id="s-sup" placeholder="IKEA"></div>
-    </div>
-    <div class="fg-row">
-      <div class="fg"><label>Количество</label><input type="number" id="s-qty" value="1" min="0" step="0.1"></div>
-      <div class="fg"><label>Единица</label>
-        <select id="s-unit">
-          <option value="шт">шт</option><option value="м">м</option>
-          <option value="м²">м²</option><option value="м³">м³</option>
-          <option value="комп">комп</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg-row">
-      <div class="fg"><label>Цена (₽)</label><input type="number" id="s-price" value="0" min="0"></div>
-      <div class="fg"><label>Статус</label>
-        <select id="s-status">
-          <option value="не заказано">Не заказано</option>
-          <option value="заказано">Заказано</option>
-          <option value="получено">Получено</option>
-          <option value="установлено">Установлено</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg"><label>Комментарий</label><textarea id="s-comm" rows="2" placeholder="Необязательно"></textarea></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-gold" onclick="saveSpec()">Сохранить</button>
-      <button class="btn btn-outline" onclick="closeModal('modal-spec')">Отмена</button>
+    <div class="modal-title">🛋 Новое помещение</div>
+    <div class="fg"><label>Название</label><input id="roomName" type="text" placeholder="Например: Гостиная"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('roomModal')" class="btn btn-outline">Отмена</button>
+      <button onclick="addRoom()" class="btn btn-gold">Добавить</button>
     </div>
   </div>
 </div>
 
-<!-- Лайтбокс -->
-<div id="lightbox" class="lightbox" onclick="closeLightbox()">
-  <img id="lightbox-img" src="" alt="">
+<!-- МОДАЛКА: Материал -->
+<div class="modal" id="materialModal">
+  <div class="modal-box">
+    <div class="modal-title">📦 Новый материал</div>
+    <div class="fg"><label>Наименование</label><input id="matName" type="text" placeholder="Например: Паркет дуб"></div>
+    <div class="fg"><label>Помещение</label><select id="matRoom"><option value="">— выберите —</option></select></div>
+    <div class="fg-row">
+      <div class="fg"><label>Количество</label><input id="matQty" type="number" min="1" value="1"></div>
+      <div class="fg"><label>Цена за ед. (₽)</label><input id="matPrice" type="number" min="0" value="0"></div>
+    </div>
+    <div class="fg">
+      <label>Статус</label>
+      <select id="matStatus">
+        <option value="pending">Ожидает</option>
+        <option value="ordered">Заказан</option>
+        <option value="received">Получен</option>
+        <option value="installed">Установлен</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('materialModal')" class="btn btn-outline">Отмена</button>
+      <button onclick="addMaterial()" class="btn btn-gold">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА: Поделиться -->
+<div class="modal" id="shareModal">
+  <div class="modal-box">
+    <div class="modal-title">🔗 Ссылка для клиента</div>
+    <div class="link-box" id="shareLink"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeModal('shareModal')" class="btn btn-outline">Закрыть</button>
+      <button onclick="copyLink()" class="btn btn-gold">📋 Копировать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ЛАЙТБОКС -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
 </div>
 
 <script>
-const PID = {{ project.id }};
+const projectId = 'demo';
 
-function showTab(name, btn) {
+let project = JSON.parse(localStorage.getItem('project_'+projectId) || 'null') || {
+  title: 'Мой проект',
+  client_name: 'Клиент',
+  address: '',
+  area: '',
+  budget: '',
+  description: ''
+};
+
+let stages    = JSON.parse(localStorage.getItem('stages_'+projectId)    || '[]');
+let files     = JSON.parse(localStorage.getItem('files_'+projectId)     || '[]');
+let rooms     = JSON.parse(localStorage.getItem('rooms_'+projectId)     || '[]');
+let materials = JSON.parse(localStorage.getItem('materials_'+projectId) || '[]');
+let vizImages = JSON.parse(localStorage.getItem('viz_'+projectId)       || '[]');
+let planImages = JSON.parse(localStorage.getItem('plan_'+projectId)     || '[]');
+
+function save(key, val){
+  localStorage.setItem(key+'_'+projectId, JSON.stringify(val));
+}
+
+// ─── ТАБЫ ───────────────────────────────────────────
+function switchTab(name, e){
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(e && e.target) e.target.classList.add('active');
 }
 
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-  if (id === 'modal-link') loadClientLink();
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
+// ─── МОДАЛКИ ────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal').forEach(m => {
-  m.addEventListener('click', function(e) {
-    if (e.target === this) closeModal(this.id);
-  });
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
 });
 
-function loadClientLink() {
-  fetch('/project/' + PID + '/client-link')
-    .then(r => r.json())
-    .then(d => { document.getElementById('client-url').textContent = d.link; });
+// ─── РЕДАКТИРОВАНИЕ ─────────────────────────────────
+function openEditModal(){
+  document.getElementById('editTitle').value   = project.title;
+  document.getElementById('editClient').value  = project.client_name;
+  document.getElementById('editAddress').value = project.address;
+  document.getElementById('editArea').value    = project.area;
+  document.getElementById('editBudget').value  = project.budget;
+  document.getElementById('editDesc').value    = project.description;
+  openModal('editModal');
 }
-function copyLink() {
-  const txt = document.getElementById('client-url').textContent;
-  navigator.clipboard.writeText(txt).then(() => alert('Ссылка скопирована!'));
+function saveEdit(){
+  project.title       = document.getElementById('editTitle').value;
+  project.client_name = document.getElementById('editClient').value;
+  project.address     = document.getElementById('editAddress').value;
+  project.area        = document.getElementById('editArea').value;
+  project.budget      = document.getElementById('editBudget').value;
+  project.description = document.getElementById('editDesc').value;
+  document.getElementById('sideTitle').textContent  = project.title;
+  document.getElementById('sideClient').textContent = project.client_name;
+  save('project', project);
+  closeModal('editModal');
 }
 
-function toggleStage(stage, value) {
-  fetch('/project/' + PID + '/stage', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({stage, value})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      document.getElementById('prog-fill').style.width = d.progress + '%';
-      document.getElementById('prog-text').textContent = d.progress + '%';
-      const si = document.getElementById('stage-' + stage);
-      if (value) si.classList.add('done'); else si.classList.remove('done');
+// ─── ЭТАПЫ ──────────────────────────────────────────
+function renderStages(){
+  const list = document.getElementById('stagesList');
+  list.innerHTML = '';
+  stages.forEach((s,i) => {
+    const div = document.createElement('div');
+    div.className = 'stage-item' + (s.done ? ' done' : '');
+    div.innerHTML = `
+      <input type="checkbox" id="s${i}" ${s.done?'checked':''} onchange="toggleStage(${i})">
+      <label for="s${i}">${s.name}</label>
+      <button onclick="deleteStage(${i})" class="btn btn-danger btn-sm">✕</button>`;
+    list.appendChild(div);
+  });
+  updateProgress();
+}
+function toggleStage(i){ stages[i].done=!stages[i].done; save('stages',stages); renderStages(); }
+function deleteStage(i){ stages.splice(i,1); save('stages',stages); renderStages(); }
+function openStageModal(){ document.getElementById('stageName').value=''; openModal('stageModal'); }
+function addStage(){
+  const name = document.getElementById('stageName').value.trim();
+  if(!name) return;
+  stages.push({name, done:false});
+  save('stages',stages);
+  renderStages();
+  closeModal('stageModal');
+}
+function updateProgress(){
+  const total = stages.length;
+  const done  = stages.filter(s=>s.done).length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressText').textContent = pct+'%';
+}
+
+// ─── ФАЙЛЫ ──────────────────────────────────────────
+function handleFiles(fileList){
+  Array.from(fileList).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      files.push({name:f.name, size:f.size, data:e.target.result, type:f.type});
+      save('files',files);
+      renderFiles();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function renderFiles(){
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  files.forEach((f,i) => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const icon      = ext==='pdf'?'📄':ext==='doc'||ext==='docx'?'📝':f.type.startsWith('image')?'🖼':'📎';
+    const iconClass = ext==='pdf'?'icon-pdf':ext==='doc'||ext==='docx'?'icon-doc':f.type.startsWith('image')?'icon-img':'icon-file';
+    const size = f.size>1024*1024 ? (f.size/1024/1024).toFixed(1)+' МБ' : (f.size/1024).toFixed(0)+' КБ';
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `
+      <div class="file-item-left">
+        <div class="file-icon ${iconClass}">${icon}</div>
+        <div><div class="file-name">${f.name}</div><div class="file-size">${size}</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a href="${f.data}" download="${f.name}" class="btn btn-outline btn-sm">⬇</a>
+        <button onclick="deleteFile(${i})" class="btn btn-danger btn-sm">✕</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+function deleteFile(i){ files.splice(i,1); save('files',files); renderFiles(); }
+
+// ─── ВИЗУАЛИЗАЦИЯ ───────────────────────────────────
+function handleVizFiles(fileList){
+  Array.from(fileList).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      vizImages.push({name:f.name, data:e.target.result});
+      save('viz', vizImages);
+      renderViz();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function renderViz(){
+  const grid = document.getElementById('vizGrid');
+  grid.innerHTML = '';
+  vizImages.forEach((img,i) => {
+    const div = document.createElement('div');
+    div.className = 'viz-item';
+    div.innerHTML = `
+      <img src="${img.data}" onclick="openLightbox('${img.data}')" alt="${img.name}">
+      <div class="viz-name">${img.name}</div>
+      <button onclick="deleteViz(${i})" class="btn btn-danger btn-sm" style="margin:6px 8px 0">✕ Удалить</button>`;
+    grid.appendChild(div);
+  });
+}
+function deleteViz(i){ vizImages.splice(i,1); save('viz',vizImages); renderViz(); }
+
+// ─── ПЛАНИРОВКИ ─────────────────────────────────────
+function handlePlanFiles(fileList){
+  Array.from(fileList).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      planImages.push({name:f.name, data:e.target.result, type:f.type});
+      save('plan', planImages);
+      renderPlan();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+function renderPlan(){
+  const grid = document.getElementById('planGrid');
+  grid.innerHTML = '';
+  planImages.forEach((img,i) => {
+    const div = document.createElement('div');
+    div.className = 'viz-item';
+    if(img.type === 'application/pdf'){
+      div.innerHTML = `
+        <div style="height:160px;display:flex;align-items:center;justify-content:center;background:#fee2e2;font-size:40px">📄</div>
+        <div class="viz-name">${img.name}</div>
+        <div style="display:flex;gap:6px;margin:6px 8px 0">
+          <a href="${img.data}" download="${img.name}" class="btn btn-outline btn-sm" style="flex:1">⬇ Скачать</a>
+          <button onclick="deletePlan(${i})" class="btn btn-danger btn-sm">✕</button>
+        </div>`;
+    } else {
+      div.innerHTML = `
+        <img src="${img.data}" onclick="openLightbox('${img.data}')" alt="${img.name}">
+        <div class="viz-name">${img.name}</div>
+        <button onclick="deletePlan(${i})" class="btn btn-danger btn-sm" style="margin:6px 8px 0">✕ Удалить</button>`;
     }
+    grid.appendChild(div);
+  });
+}
+function deletePlan(i){ planImages.splice(i,1); save('plan',planImages); renderPlan(); }
+
+// ─── ПОМЕЩЕНИЯ ──────────────────────────────────────
+function openRoomModal(){ document.getElementById('roomName').value=''; openModal('roomModal'); }
+function addRoom(){
+  const name = document.getElementById('roomName').value.trim();
+  if(!name) return;
+  rooms.push({name, images:[]});
+  save('rooms',rooms);
+  renderRooms();
+  updateMatRooms();
+  closeModal('roomModal');
+}
+function deleteRoom(i){ rooms.splice(i,1); save('rooms',rooms); renderRooms(); updateMatRooms(); }
+function renderRooms(){
+  const grid = document.getElementById('roomsGrid');
+  grid.innerHTML = '';
+  rooms.forEach((r,i) => {
+    const div = document.createElement('div');
+    div.className = 'room-card';
+    const imgs = (r.images||[]).map((src,j) =>
+      `<img src="${src}" onclick="openLightbox('${src}')" alt="">`
+    ).join('');
+    div.innerHTML = `
+      <div class="room-header">
+        <span class="room-name">${r.name}</span>
+        <button onclick="deleteRoom(${i})" class="btn btn-danger btn-sm">✕</button>
+      </div>
+      <div class="room-images">${imgs}</div>
+      <div class="room-upload">
+        <label class="btn btn-outline btn-sm" style="width:100%;justify-content:center;cursor:pointer">
+          📷 Добавить фото
+          <input type="file" accept="image/*" multiple onchange="addRoomImage(${i},this.files)">
+        </label>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+function addRoomImage(i, fileList){
+  Array.from(fileList).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      rooms[i].images = rooms[i].images || [];
+      rooms[i].images.push(e.target.result);
+      save('rooms',rooms);
+      renderRooms();
+    };
+    reader.readAsDataURL(f);
   });
 }
 
-function uploadFiles(input, cat) {
-  if (!input.files.length) return;
-  const fd = new FormData();
-  for (const f of input.files) fd.append('file', f);
-  fd.append('category', cat);
-  fetch('/project/' + PID + '/upload', {method: 'POST', body: fd})
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        const list = document.getElementById('fl-' + cat);
-        d.docs.forEach(doc => {
-          const icon = doc.file_type==='image' ? '🖼️' : doc.file_type==='pdf' ? '📕' : doc.file_type==='word' ? '📘' : '📎';
-          const cls = doc.file_type==='image' ? 'icon-img' : doc.file_type==='pdf' ? 'icon-pdf' : doc.file_type==='word' ? 'icon-doc' : 'icon-file';
-          const el = document.createElement('div');
-          el.className = 'file-item';
-          el.id = 'doc-' + doc.id;
-          el.innerHTML = `
-            <div class="file-item-left">
-              <div class="file-icon ${cls}">${icon}</div>
-              <div>
-                <a href="/uploads/${PID}/${doc.filename}" target="_blank" class="file-name" style="text-decoration:none;color:#2c2c2c">${doc.original_name}</a>
-                <div class="file-size">${(doc.file_size/1024).toFixed(1)} KB</div>
-              </div>
-            </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteDoc(${doc.id})">✕</button>`;
-          list.appendChild(el);
-        });
-        input.value = '';
-      } else { alert(d.error); }
-    });
-}
+// ─── МАТЕРИАЛЫ ──────────────────────────────────────
+const statusLabels  = {pending:'Ожидает',ordered:'Заказан',received:'Получен',installed:'Установлен'};
+const statusClasses = {pending:'s-pending',ordered:'s-ordered',received:'s-received',installed:'s-installed'};
 
-function deleteDoc(id) {
-  if (!confirm('Удалить файл?')) return;
-  fetch('/doc/' + id + '/delete', {method: 'POST'})
-    .then(r => r.json())
-    .then(d => { if (d.success) document.getElementById('doc-' + id).remove(); });
-}
-
-function addRoom() {
-  const name = document.getElementById('room-name-input').value.trim();
-  if (!name) return alert('Введите название');
-  fetch('/project/' + PID + '/room/add', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) { closeModal('modal-room'); location.reload(); }
+function updateMatRooms(){
+  const sel = document.getElementById('matRoom');
+  sel.innerHTML = '<option value="">— выберите —</option>';
+  rooms.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.name;
+    sel.appendChild(opt);
   });
 }
+function renderMaterials(){
+  const tbody = document.getElementById('materialsBody');
+  tbody.innerHTML = '';
+  let total = 0;
+  materials.forEach((m,i) => {
+    const sum = m.qty * m.price;
+    total += sum;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.name}</td>
+      <td>${m.room||'—'}</td>
+      <td>${m.qty}</td>
+      <td>${Number(m.price).toLocaleString()} ₽</td>
+      <td>${Number(sum).toLocaleString()} ₽</td>
+      <td><span class="status-badge ${statusClasses[m.status]}">${statusLabels[m.status]}</span></td>
+      <td><button onclick="deleteMaterial(${i})" class="btn btn-danger btn-sm">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('totalSum').textContent = Number(total).toLocaleString()+' ₽';
+}
+function openMaterialModal(){ updateMatRooms(); openModal('materialModal'); }
+function addMaterial(){
+  const name = document.getElementById('matName').value.trim();
+  if(!name) return;
+  materials.push({
+    name,
+    room:   document.getElementById('matRoom').value,
+    qty:    parseInt(document.getElementById('matQty').value)||1,
+    price:  parseFloat(document.getElementById('matPrice').value)||0,
+    status: document.getElementById('matStatus').value
+  });
+  save('materials',materials);
+  renderMaterials();
+  closeModal('materialModal');
+}
+function deleteMaterial(i){ materials.splice(i,1); save('materials',materials); renderMaterials(); }
 
-function deleteRoom(id) {
-  if (!confirm('Удалить комнату со всеми фото?')) return;
-  fetch('/room/' + id + '/delete', {method: 'POST'})
-    .then(r => r.json())
-    .then(d => { if (d.success) document.getElementById('room-' + id).remove(); });
+// ─── ЗАМЕТКИ ────────────────────────────────────────
+function saveNotes(){
+  localStorage.setItem('notes_'+projectId, document.getElementById('notesArea').value);
+}
+function loadNotes(){
+  document.getElementById('notesArea').value = localStorage.getItem('notes_'+projectId)||'';
 }
 
-function uploadRoomImages(input, roomId) {
-  if (!input.files.length) return;
-  const fd = new FormData();
-  for (const f of input.files) fd.append('file', f);
-  fetch('/room/' + roomId + '/upload', {method: 'POST', body: fd})
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        const grid = document.getElementById('ri-' + roomId);
-        d.images.forEach(img => {
-          const el = document.createElement('img');
-          el.src = '/uploads/' + PID + '/' + img.filename;
-          el.onclick = () => openLightbox(el.src);
-          grid.appendChild(el);
-        });
-        input.value = '';
-      } else { alert(d.error); }
-    });
+// ─── ПОДЕЛИТЬСЯ ─────────────────────────────────────
+function openShareModal(){
+  document.getElementById('shareLink').textContent = window.location.href;
+  openModal('shareModal');
+}
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href);
+  alert('Ссылка скопирована!');
 }
 
-function openLightbox(src) {
-  document.getElementById('lightbox-img').src = src;
+// ─── ЛАЙТБОКС ───────────────────────────────────────
+function openLightbox(src){
+  document.getElementById('lightboxImg').src = src;
   document.getElementById('lightbox').classList.add('open');
 }
-function closeLightbox() {
+function closeLightbox(){
   document.getElementById('lightbox').classList.remove('open');
 }
 
-function openAddSpec() {
-  document.getElementById('spec-modal-title').textContent = 'Добавить позицию';
-  document.getElementById('spec-edit-id').value = '';
-  ['s-room','s-cat','s-name','s-art','s-sup','s-comm'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('s-qty').value = 1;
-  document.getElementById('s-price').value = 0;
-  document.getElementById('s-unit').value = 'шт';
-  document.getElementById('s-status').value = 'не заказано';
-  openModal('modal-spec');
-}
-
-function openEditSpec(id, room, cat, name, art, sup, qty, unit, price, status, comment) {
-  document.getElementById('spec-modal-title').textContent = 'Редактировать позицию';
-  document.getElementById('spec-edit-id').value = id;
-  document.getElementById('s-room').value = room;
-  document.getElementById('s-cat').value = cat;
-  document.getElementById('s-name').value = name;
-  document.getElementById('s-art').value = art;
-  document.getElementById('s-sup').value = sup;
-  document.getElementById('s-qty').value = qty;
-  document.getElementById('s-unit').value = unit;
-  document.getElementById('s-price').value = price;
-  document.getElementById('s-status').value = status;
-  document.getElementById('s-comm').value = comment;
-  openModal('modal-spec');
-}
-
-function saveSpec() {
-  const name = document.getElementById('s-name').value.trim();
-  if (!name) return alert('Введите наименование');
-  const editId = document.getElementById('spec-edit-id').value;
-  const data = {
-    room_name: document.getElementById('s-room').value,
-    category: document.getElementById('s-cat').value,
-    item_name: name,
-    article: document.getElementById('s-art').value,
-    supplier: document.getElementById('s-sup').value,
-    quantity: parseFloat(document.getElementById('s-qty').value) || 1,
-    unit: document.getElementById('s-unit').value,
-    price: parseFloat(document.getElementById('s-price').value) || 0,
-    status: document.getElementById('s-status').value,
-    comment: document.getElementById('s-comm').value
-  };
-  const url = editId ? '/spec/' + editId + '/edit' : '/project/' + PID + '/spec/add';
-  fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) { closeModal('modal-spec'); location.reload(); }
-    });
-}
-
-function deleteSpec(id) {
-  if (!confirm('Удалить позицию?')) return;
-  fetch('/spec/' + id + '/delete', {method: 'POST'})
-    .then(r => r.json())
-    .then(d => { if (d.success) { document.getElementById('sr-' + id).remove(); recalcTotal(); } });
-}
-
-function recalcTotal() {
-  let total = 0;
-  document.querySelectorAll('#spec-tbody tr').forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length > 6) {
-      const val = parseFloat(cells[6].textContent.replace(/[^\d.]/g,'')) || 0;
-      total += val;
-    }
-  });
-  document.getElementById('total-sum').textContent = total.toLocaleString('ru-RU') + ' ₽';
-}
+// ─── ИНИЦИАЛИЗАЦИЯ ──────────────────────────────────
+document.getElementById('sideTitle').textContent  = project.title;
+document.getElementById('sideClient').textContent = project.client_name;
+renderStages();
+renderFiles();
+renderViz();
+renderPlan();
+renderRooms();
+renderMaterials();
+loadNotes();
 </script>
+
 </body>
 </html>
